@@ -73,7 +73,7 @@ IPAddress ip(10, 20, 30, 21);
 
 // byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };   //physical mac address
 uint8_t mac[6] = {0x00,0x01,0x02,0x03,0x04,0x05}; 
-char server[] = "topeni.cz"; //server, kam se pripojujeme
+char server[] = "www.ipf.cz"; //server, kam se pripojujeme
 
 
 
@@ -263,7 +263,8 @@ void read_data_topeni(int send_relay) {
           
           
           client.println(" HTTP/1.0");
-          client.println("Host: samal.es");
+          client.print("Host: ");
+          client.println(server);
           client.println("Connection: close");
           client.println();
 
