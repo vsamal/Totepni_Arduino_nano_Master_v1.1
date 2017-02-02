@@ -1,8 +1,19 @@
-#include "SPI.h"
+/*
+#include <Dhcp.h>
+#include <Dns.h>
+#include <ethernet_comp.h>
+#include <UIPClient.h>
+#include <UIPEthernet.h>
+#include <UIPServer.h>
+#include <UIPUdp.h>
+*/
+
+
+// #include "SPI.h"
 #include "Wire.h"
 #include "OneWire.h"
 #include "UIPEthernet.h"
-#include "SoftwareSerial.h"
+//#include "SoftwareSerial.h"
 #include "DallasTemperature.h"
 #include "AM2320.h"
 #include "avr/wdt.h"
@@ -28,10 +39,12 @@ byte tlacitko_modul[5] = {99, A3, A2, A1, A0};
 byte rele_modul[5] = {99, 0, 0, 0, 0};
 
 // detekce alarmu
-byte alarm = 6;
+byte alarm = 8;
 boolean is_alarm = false;
-byte internet_error = 7;
+byte internet_error = 9;
 
+// int sw_rx = 4;
+// int sw_tx = 5;
 
 // nastavení čísla vstupního pinu
 const int pinCidlaDS = 3;
@@ -41,7 +54,7 @@ OneWire oneWireDS(pinCidlaDS);
 DallasTemperature senzoryDS(&oneWireDS);
 
 // SIM na software seriovém portu
-SoftwareSerial SIM900(4,5); //RX,TX
+// SoftwareSerial SIM900(sw_rx,sw_tx); //RX,TX
 
 
 EthernetClient client;
@@ -80,11 +93,11 @@ char server[] = "www.ipf.cz"; //server, kam se pripojujeme
 
 void setup()   {                
 
-  wdt_enable(WDTO_8S);
+  // wdt_enable(WDTO_8S);
   
   Wire.begin();  
   Serial.begin(9600);  
-  SIM900.begin(9600); 
+  // SIM900.begin(9600); 
 
   // zapnutí komunikace knihovny s Dallas teplotním čidlem
   senzoryDS.begin();
@@ -103,6 +116,7 @@ void setup()   {
 
   Ethernet.begin(mac, ip, dnServer, gateway, subnet);
 
+  // info casovac dalsiho precteni dat z webu
   next = 0;
 
 }
@@ -115,11 +129,16 @@ void loop() {
   readTemp();
   // read_data_topeni();
 
+  
+  /*
+   
   setI2Cvals(senzoryDS.getTempCByIndex(0));
 
   Serial.print(val_int);
   Serial.print(" => ");
   Serial.println(val_decimal);
+  
+  */
   
   /*
   
@@ -129,7 +148,7 @@ void loop() {
   Wire.endTransmission();
   Serial.flush();
   
-  wdt_reset();
+  clr_wdt();
   
 
  Wire.requestFrom(100, 11);
@@ -142,7 +161,7 @@ void loop() {
   }
   Serial.flush();
 
-  wdt_reset();
+  clr_wdt();
 
   */
 
@@ -151,9 +170,10 @@ void loop() {
   // ----------- tlacitka a alarm a Internet ----------
 
 
-    // zkontrolujeme alarm   
+   // zkontrolujeme alarm 
+  // Serial.println("Test alarm");  
   if(digitalRead(alarm) == LOW){
-             delay(10);
+             delay(300);
              if(digitalRead(alarm) == LOW){
                 if(is_alarm == false){setAlarm();}
                 is_alarm = true;
@@ -163,27 +183,35 @@ void loop() {
         }else{
              is_alarm = false;
         }  
-  
+    // Serial.println("OK");  
 
     // projedeme si stisknuta tlacitka
+    // Serial.println("Test key");  
     for(int i = 1; i <= 4; i++){
           if(digitalRead(tlacitko_modul[i]) == LOW){
             Serial.println(i); //vypise stisknute tlacitko
             setRelayFromKey(i);
           }
-          delay(10);
+          delay(1);
     }
+    // Serial.println("OK");  
 
 
 
-
+  // Serial.println("Test internet");  
   if (((signed long)(millis() - next)) > 0){
       
+        Serial.println("Read internet ready");  
         next = millis() + 11000;
+
+        digitalWrite(internet_error, HIGH);
+        delay(100);
+        digitalWrite(internet_error, LOW);
 
         read_data_topeni(0);
         
   }
+  // Serial.println("Test internet OK");  
 
 
     
@@ -222,14 +250,25 @@ void readTemp() {
       break;
   }
 
-  delay(200);
-  wdt_reset();
+  delay(10); // 200
+  clr_wdt();
 }
 
 
+void clr_wdt() {
+
+      // wdt_reset();
+  
+}
 
 
 void read_data_topeni(int send_relay) {
+
+      
+      clr_wdt();
+
+      Serial.print("Connect to ");
+      Serial.println(server);
 
       
       if (client.connect(server,80)){
@@ -237,30 +276,28 @@ void read_data_topeni(int send_relay) {
           Serial.println("Connected");
 
           digitalWrite(internet_error, LOW);
+          clr_wdt();
           
           String myURL = "GET /topeni/topeni.php?relay=";
-          Serial.println(myURL);
-                    
           client.print(myURL);
           client.print(send_relay);
           client.print("&status=");
         
-                if (digitalRead(rele_modul[send_relay]) == LOW){client.print(1);}
-                if (digitalRead(rele_modul[send_relay]) == HIGH){client.print(0);}               
+                if (rele_modul[send_relay] == LOW){client.print(1);}
+                if (rele_modul[send_relay] == HIGH){client.print(0);}               
           
-          client.print("&temp1=");
+          client.print("&temp[1]=");
           client.print(teplota);
-          client.print("&humid1=");
+          client.print("&humid[1]=");
           client.print(vlhkost);
-          client.print("&temp2=");
+          client.print("&temp[2]=");
           client.print(senzoryDS.getTempCByIndex(0));
-          client.print("&temp3=");
+          client.print("&temp[3]=");
           client.print(senzoryDS.getTempCByIndex(1));
-          client.print("&temp4=");
+          client.print("&temp[4]=");
           client.print(senzoryDS.getTempCByIndex(2));
-          client.print("&temp5=");
-          client.print(senzoryDS.getTempCByIndex(3));
-          
+          client.print("&temp[5]=");
+          client.print(senzoryDS.getTempCByIndex(1));
           
           client.println(" HTTP/1.0");
           client.print("Host: ");
@@ -268,9 +305,11 @@ void read_data_topeni(int send_relay) {
           client.println("Connection: close");
           client.println();
 
+          Serial.println(myURL);
+
           nalez = false;
           byte relec = 1;        
-          delay(10);
+          delay(1);
           
 
           // precteni dat z internetu
@@ -284,7 +323,7 @@ void read_data_topeni(int send_relay) {
                  
                 if (nalez){
 
-                  Serial.print(read_buffer); //vypise prijata data
+                  // Serial.print(read_buffer); //vypise prijata data
                   // na tohle mozna udelame funkci  
                   if (read_buffer == '0'){rele_modul[relec] = 1;}
                   if (read_buffer == '1'){rele_modul[relec] = 0;}
@@ -298,24 +337,26 @@ void read_data_topeni(int send_relay) {
           }
         
     
-         Serial.println();
-         Serial.println("Odpojuji.");
-         delay(10);
+         //Serial.println();
+         //Serial.println("Odpojuji.");
+         delay(1);
          client.flush();
-         delay(10);
-         Serial.println();
+         delay(1);
+         //Serial.println();
          client.stop();   
          
        }else{
         
-        Serial.println("Connect failed");
+        //Serial.println("Connect failed");
 
         digitalWrite(internet_error, HIGH);
 
+        clr_wdt();
+
        }
-
-
-    wdt_reset();
+ 
+    Serial.println("Internet OK");  
+    clr_wdt();
 }
 
 
@@ -342,8 +383,8 @@ void setRelayFromKey(int tlac_press){
             
             read_data_topeni(tlac_press);
             
-            delay(1000);
-            wdt_reset();
+            // delay(1000);
+            clr_wdt();
 }
 
 
@@ -358,7 +399,7 @@ void setAlarm(){
             
             //makeCall("604833891");
             //makeCall("605906254");
-            makeCall("737226659");
+            //makeCall("737226659");
             //sendSMS("737226659");
             //makeCall("737226659");
             
@@ -366,20 +407,22 @@ void setAlarm(){
 
 
 void delayWDT(int delaysec = 30){
-            wdt_reset();
+            clr_wdt();
        
             int waiting_call = 0;
             while(waiting_call <= delaysec){
                 delay (1000);
-                wdt_reset();
+                clr_wdt();
                 waiting_call += 1;
             }            
-            wdt_reset();
+            clr_wdt();
 }
 
 
+/*
+
 void makeCall(char callnumber[]){
-            wdt_reset();
+            clr_wdt();
             
             SIM900.print("ATD");
             SIM900.print(callnumber);
@@ -395,10 +438,8 @@ void makeCall(char callnumber[]){
                        
             SIM900.println("ATH");                      
             delay (1000);
-            wdt_reset();
+            clr_wdt();
 }
-
-
 
 
 void sendSMS(char smsnumber[]){
@@ -421,6 +462,7 @@ void sendSMS(char smsnumber[]){
           SIM900.println();
           delayWDT(11);  // pokej na odesln SMS
           //SIM900power();  // vypni GSM module
-          wdt_reset();
+          clr_wdt();
         }
 
+*/
