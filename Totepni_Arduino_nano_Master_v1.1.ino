@@ -31,21 +31,16 @@ int val_decimal;
 // I2C PINs A4, A5
 String dataI2C; 
 
-// nactena data ze SIMM
-char s;
-
 // tlacitka vstupu
 byte tlacitko_modul[5] = {99, A3, A2, A1, A0};
 // pamet rele vystupu
-byte rele_modul[5] = {99, 0, 0, 0, 0};
+byte rele_modul[17] = {99, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // detekce alarmu
 byte alarm = 8;
 boolean is_alarm = false;
 byte internet_error = 9;
 
-// int sw_rx = 4;
-// int sw_tx = 5;
 
 // nastavení čísla vstupního pinu
 const int pinCidlaDS = 3;
@@ -54,13 +49,13 @@ OneWire oneWireDS(pinCidlaDS);
 // vytvoření instance senzoryDS z knihovny DallasTemperature
 DallasTemperature senzoryDS(&oneWireDS);
 
-// SIM na software seriovém portu
-// SoftwareSerial SIM900(sw_rx,sw_tx); //RX,TX
-
 
 EthernetClient client;
 // Ethernet PINs 10, 11, 12, 13
 signed long next;
+int next_sd;  
+int next_wd;
+int data_read;
 char read_buffer;
 boolean nalez = false;
 
@@ -99,7 +94,6 @@ void setup()   {
   
   Wire.begin();  
   Serial.begin(9600);  
-  // SIM900.begin(9600); 
 
   // zapnutí komunikace knihovny s Dallas teplotním čidlem
   senzoryDS.begin();
@@ -137,72 +131,93 @@ void loop() {
    
   setI2Cvals(senzoryDS.getTempCByIndex(0));
 
+  /*
+  
   Serial.print(val_int);
   Serial.print(" => ");
   Serial.println(val_decimal);
+
+  */
   
  
   
-  // posledem data do SLAVE adruina 
+  // posledem data do SLAVE adruina ------
+  next_sd++;
   
-  Wire.beginTransmission(100);
-  
-  Wire.write(1); 
-  Wire.write(0);
-  Wire.write(1); 
-  Wire.write(0);
-  Wire.write(1); 
-  Wire.write(0); 
-  Wire.write(1); 
-  Wire.write(0); 
-  
-  setI2Cvals(teplota);
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
+  if (next_sd > 27){  
 
-  setI2Cvals(vlhkost);
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
-
-  setI2Cvals(senzoryDS.getTempCByIndex(0));
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
-
-  setI2Cvals(senzoryDS.getTempCByIndex(1));
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
-
-  setI2Cvals(senzoryDS.getTempCByIndex(2));
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
-
-  setI2Cvals(senzoryDS.getTempCByIndex(1));
-  Wire.write(val_int); 
-  Wire.write(val_decimal); 
-  
-  Wire.endTransmission();
-  Wire.flush();
-  
-  clr_wdt();
-  
-
- /*
-
- Wire.requestFrom(100, 11);
- dataI2C = "";
- while(Wire.available() > 0){
-      int data_read = Wire.read();
-      dataI2C += data_read;
-      Serial.print("Data: ");
-      Serial.println(data_read);
+        next_sd = 0;
+        
+        Wire.beginTransmission(100);
+      
+        // posleme stav relatek
+        for(int i = 1; i <= 16; i++){
+              Wire.write(rele_modul[i]);
+        }
+      
+        
+        // posleme stav teplomeru a vlhkomeru
+        setI2Cvals(teplota);
+        Wire.write(val_int); 
+        Wire.write(val_decimal); 
+      
+        setI2Cvals(vlhkost);
+        Wire.write(val_int); 
+        Wire.write(val_decimal); 
+      
+       
+        // posleme stav cidel
+        for(int i = 0; i <= 3; i++){
+            setI2Cvals(senzoryDS.getTempCByIndex(i));
+            Wire.write(val_int); 
+            Wire.write(val_decimal); 
+        }  
+        
+        Wire.endTransmission();
+        Wire.flush();
+      
+        delay(100);
+        
+        clr_wdt();
+        
   }
-  Serial.flush();
+  // data do SLAVE adruina odeslana ------
+  
 
+ // precteme data ze SLAVE
+
+  /*
+  
+  next_wd++;
+                
+  if (next_wd > 59){
+        
+        next_wd = 0;
+ 
+             Wire.flush();
+             Wire.requestFrom(100, 1);
+             // dataI2C = "";
+             data_read = 0;
+             while(Wire.available() > 0){
+                  data_read = Wire.read();
+                  // dataI2C += data_read;
+              }
+            
+              Serial.print("Data readed from SLAVE: ");
+              Serial.println(data_read);
+             
+             Wire.endTransmission();
+             Serial.flush();
+             Wire.flush();
+            
+             clr_wdt();
+
+        }
 
  */
  
+ // data ze SLAVE prectena
 
-  clr_wdt();
 
 
 
