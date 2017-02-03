@@ -16,7 +16,7 @@
 //#include "SoftwareSerial.h"
 #include "DallasTemperature.h"
 #include "AM2320.h"
-#include "avr/wdt.h"
+//#include "avr/wdt.h"
 
 // definice cidla teplota a vlhkost
 AM2320 th;
@@ -28,6 +28,7 @@ int val_int;
 int val_decimal;
 
 // precteny data z I2C pro textovy vystup na odeslani do displeje
+// I2C PINs A4, A5
 String dataI2C; 
 
 // nactena data ze SIMM
@@ -58,6 +59,7 @@ DallasTemperature senzoryDS(&oneWireDS);
 
 
 EthernetClient client;
+// Ethernet PINs 10, 11, 12, 13
 signed long next;
 char read_buffer;
 boolean nalez = false;
@@ -130,7 +132,8 @@ void loop() {
   // read_data_topeni();
 
   
-  /*
+  
+
    
   setI2Cvals(senzoryDS.getTempCByIndex(0));
 
@@ -138,18 +141,52 @@ void loop() {
   Serial.print(" => ");
   Serial.println(val_decimal);
   
-  */
+ 
   
-  /*
+  // posledem data do SLAVE adruina 
   
   Wire.beginTransmission(100);
+  
+  Wire.write(1); 
+  Wire.write(0);
+  Wire.write(1); 
+  Wire.write(0);
+  Wire.write(1); 
+  Wire.write(0); 
+  Wire.write(1); 
+  Wire.write(0); 
+  
+  setI2Cvals(teplota);
   Wire.write(val_int); 
   Wire.write(val_decimal); 
+
+  setI2Cvals(vlhkost);
+  Wire.write(val_int); 
+  Wire.write(val_decimal); 
+
+  setI2Cvals(senzoryDS.getTempCByIndex(0));
+  Wire.write(val_int); 
+  Wire.write(val_decimal); 
+
+  setI2Cvals(senzoryDS.getTempCByIndex(1));
+  Wire.write(val_int); 
+  Wire.write(val_decimal); 
+
+  setI2Cvals(senzoryDS.getTempCByIndex(2));
+  Wire.write(val_int); 
+  Wire.write(val_decimal); 
+
+  setI2Cvals(senzoryDS.getTempCByIndex(1));
+  Wire.write(val_int); 
+  Wire.write(val_decimal); 
+  
   Wire.endTransmission();
-  Serial.flush();
+  Wire.flush();
   
   clr_wdt();
   
+
+ /*
 
  Wire.requestFrom(100, 11);
  dataI2C = "";
@@ -161,9 +198,13 @@ void loop() {
   }
   Serial.flush();
 
+
+ */
+ 
+
   clr_wdt();
 
-  */
+
 
 
 
@@ -175,7 +216,10 @@ void loop() {
   if(digitalRead(alarm) == LOW){
              delay(300);
              if(digitalRead(alarm) == LOW){
-                if(is_alarm == false){setAlarm();}
+                if(is_alarm == false){
+                        digitalWrite(internet_error, HIGH);
+                        setAlarm();
+                  }
                 is_alarm = true;
              }else{
                 is_alarm = false;
@@ -205,8 +249,6 @@ void loop() {
         next = millis() + 11000;
 
         digitalWrite(internet_error, HIGH);
-        delay(100);
-        digitalWrite(internet_error, LOW);
 
         read_data_topeni(0);
         
@@ -222,7 +264,17 @@ void loop() {
 
 
 
-
+// alarm zavola na mobil
+void setAlarm(){
+            Serial.println("Alarm");                   
+            
+            //makeCall("604833891");
+            //makeCall("605906254");
+            //makeCall("737226659");
+            //sendSMS("737226659");
+            //makeCall("737226659");
+            
+}
 
 
 
@@ -275,7 +327,7 @@ void read_data_topeni(int send_relay) {
 
           Serial.println("Connected");
 
-          digitalWrite(internet_error, LOW);
+          // digitalWrite(internet_error, LOW);
           clr_wdt();
           
           String myURL = "GET /topeni/topeni.php?relay=";
@@ -323,6 +375,7 @@ void read_data_topeni(int send_relay) {
                  
                 if (nalez){
 
+                  digitalWrite(internet_error, LOW);
                   // Serial.print(read_buffer); //vypise prijata data
                   // na tohle mozna udelame funkci  
                   if (read_buffer == '0'){rele_modul[relec] = 1;}
@@ -393,17 +446,6 @@ void setRelayFromKey(int tlac_press){
 
 
 
-// alarm zavola na mobil
-void setAlarm(){
-            Serial.println("Alarm");                   
-            
-            //makeCall("604833891");
-            //makeCall("605906254");
-            //makeCall("737226659");
-            //sendSMS("737226659");
-            //makeCall("737226659");
-            
-}
 
 
 void delayWDT(int delaysec = 30){
@@ -418,51 +460,3 @@ void delayWDT(int delaysec = 30){
             clr_wdt();
 }
 
-
-/*
-
-void makeCall(char callnumber[]){
-            clr_wdt();
-            
-            SIM900.print("ATD");
-            SIM900.print(callnumber);
-            SIM900.println(";");
-            delay(100);            
-             
-            while (SIM900.available()){
-            s = SIM900.read();
-              Serial.print(s);
-            }  
-        
-            delayWDT(29);
-                       
-            SIM900.println("ATH");                      
-            delay (1000);
-            clr_wdt();
-}
-
-
-void sendSMS(char smsnumber[]){
-          SIM900.println("AT+CMGF=1");  // AT command na odeslani SMS zpravy
-          delay(100);
-          SIM900.print("AT+CMGS=\"");  // cislo prijemce
-          SIM900.print(smsnumber);  // cislo prijemce
-          SIM900.println("\"");  // cislo prijemce
-          delay(100);
-          SIM900.println("Alarm send.");  // zprava k odeslani
-          SIM900.print("Status: ");  // zprava k odeslani
-          SIM900.print(rele_modul[1]);  // zprava k odeslani
-          SIM900.print(rele_modul[2]);  // zprava k odeslani
-          SIM900.print(rele_modul[3]);  // zprava k odeslani
-          SIM900.println(rele_modul[4]);  // zprava k odeslani
-          SIM900.print(" is set.");  // zprava k odeslani
-          delay(100);
-          SIM900.println((char)26);  //  AT command znak a ^Z, ASCII code 26 pro konec SMS zpravy
-          delay(100); 
-          SIM900.println();
-          delayWDT(11);  // pokej na odesln SMS
-          //SIM900power();  // vypni GSM module
-          clr_wdt();
-        }
-
-*/
