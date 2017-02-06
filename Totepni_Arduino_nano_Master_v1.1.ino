@@ -32,9 +32,9 @@ int val_decimal;
 String dataI2C; 
 
 // tlacitka vstupu
-byte tlacitko_modul[5] = {99, A3, A2, A1, A0};
+byte tlacitko_modul[5] = {99, A2, A3, A0, A1};
 // pamet rele vystupu
-byte rele_modul[17] = {99, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+byte rele_modul[17] = {99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // detekce alarmu
 byte alarm = 8;
@@ -244,11 +244,17 @@ void loop() {
         }  
     // Serial.println("OK");  
 
+
+
+
+
+
     // projedeme si stisknuta tlacitka
     // Serial.println("Test key");  
     for(int i = 1; i <= 4; i++){
           if(digitalRead(tlacitko_modul[i]) == LOW){
             Serial.println(i); //vypise stisknute tlacitko
+            next_sd = 999;
             setRelayFromKey(i);
           }
           delay(1);
@@ -349,9 +355,10 @@ void read_data_topeni(int send_relay) {
           client.print(myURL);
           client.print(send_relay);
           client.print("&status=");
+          client.print(rele_modul[send_relay]);
         
-                if (rele_modul[send_relay] == LOW){client.print(1);}
-                if (rele_modul[send_relay] == HIGH){client.print(0);}               
+                // if (rele_modul[send_relay] == 0){client.print(0);}
+                // if (rele_modul[send_relay] == 1){client.print(1);}               
           
           client.print("&temp[1]=");
           client.print(teplota);
@@ -372,7 +379,10 @@ void read_data_topeni(int send_relay) {
           client.println("Connection: close");
           client.println();
 
-          Serial.println(myURL);
+          Serial.print(myURL);
+          Serial.print(send_relay);
+          Serial.print("&status=");
+          Serial.println(rele_modul[send_relay]);
 
           nalez = false;
           byte relec = 1;        
@@ -393,8 +403,8 @@ void read_data_topeni(int send_relay) {
                   digitalWrite(internet_error, LOW);
                   // Serial.print(read_buffer); //vypise prijata data
                   // na tohle mozna udelame funkci  
-                  if (read_buffer == '0'){rele_modul[relec] = 1;}
-                  if (read_buffer == '1'){rele_modul[relec] = 0;}
+                  if (read_buffer == '0'){rele_modul[relec] = 0;}
+                  if (read_buffer == '1'){rele_modul[relec] = 1;}
                   relec++;                  
 
                 }
