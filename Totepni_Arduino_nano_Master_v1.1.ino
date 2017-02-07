@@ -355,10 +355,9 @@ void read_data_topeni(int send_relay) {
           client.print(myURL);
           client.print(send_relay);
           client.print("&status=");
-          client.print(rele_modul[send_relay]);
-        
-                // if (rele_modul[send_relay] == 0){client.print(0);}
-                // if (rele_modul[send_relay] == 1){client.print(1);}               
+                  
+                if (rele_modul[send_relay] == 0){client.print(0);}
+                if (rele_modul[send_relay] == 1){client.print(1);}               
           
           client.print("&temp[1]=");
           client.print(teplota);
@@ -379,10 +378,10 @@ void read_data_topeni(int send_relay) {
           client.println("Connection: close");
           client.println();
 
-          Serial.print(myURL);
-          Serial.print(send_relay);
-          Serial.print("&status=");
-          Serial.println(rele_modul[send_relay]);
+          // Serial.print(myURL);
+          // Serial.print(send_relay);
+          // Serial.print("&status=");
+          // Serial.println(rele_modul[send_relay]);
 
           nalez = false;
           byte relec = 1;        
