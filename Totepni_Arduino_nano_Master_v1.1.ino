@@ -378,10 +378,10 @@ void read_data_topeni(int send_relay) {
           client.println("Connection: close");
           client.println();
 
-          // Serial.print(myURL);
-          // Serial.print(send_relay);
-          // Serial.print("&status=");
-          // Serial.println(rele_modul[send_relay]);
+          Serial.print(myURL);
+          Serial.print(send_relay);
+          Serial.print("&status=");
+          Serial.println(rele_modul[send_relay]);
 
           nalez = false;
           byte relec = 1;        
